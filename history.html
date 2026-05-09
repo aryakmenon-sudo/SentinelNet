@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel Net - History</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+        }
+        /* HEADER */
+        
+        header {
+            background: #1e3a5f;
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        
+        nav a {
+            color: #dcdcdc;
+            text-decoration: none;
+            margin-left: 25px;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        
+        nav a:hover {
+            color: white;
+        }
+        
+        .active {
+            color: white;
+            border-bottom: 2px solid white;
+            padding-bottom: 3px;
+        }
+        /* MAIN */
+        
+        main {
+            padding: 30px 50px;
+        }
+        
+        h2 {
+            color: #fdfcfc;
+            margin-bottom: 25px;
+        }
+        /* CARDS */
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .card h3 {
+            margin-top: 0;
+            color: #222;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        /* ALERTS */
+        
+        .alerts-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .log-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 14px 0;
+            font-size: 15px;
+        }
+        
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ff4d4d;
+        }
+        
+        .alert-text {
+            color: #ff4d4d;
+            font-weight: 600;
+        }
+        /* GRAPH */
+        
+        .chart-box {
+            height: 420px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+
+        <div class="header">
+
+            <div style="
+        display:flex;
+        align-items:center;
+        gap:15px;
+    ">
+
+                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="logo" style="
+                width:55px;
+                height:55px;
+                border-radius:10px;
+                object-fit:cover;
+             ">
+
+                <h2>Sentinel Net</h2>
+
+            </div>
+
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/history-page" class="active">History</a>
+            </nav>
+
+    </header>
+
+    <!-- MAIN -->
+    <main>
+
+
+        <section class="card">
+
+            <h3 onclick="toggleLogs()" style="
+        cursor: pointer;
+        user-select: none;
+    ">
+                📂 System History
+            </h3>
+
+            <div id="logsSection" style="
+        display: none;
+        margin-top: 20px;
+    ">
+
+                {% for alert in alerts %}
+
+                <div class="log-item">
+
+                    <div class="dot"></div>
+
+                    <div class="alert-text">
+                        {{ alert }}
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+        <!-- ALERT LOGS -->
+
+
+        <!-- GRAPH -->
+        <section class="card chart-box">
+
+            <h3>📊 CPU & Memory Usage Trends</h3>
+
+            <canvas id="combinedChart"></canvas>
+
+        </section>
+
+    </main>
+
+    <script>
+        const ctx = document.getElementById('combinedChart').getContext('2d');
+
+        // CPU gradient
+        const cpuGradient = ctx.createLinearGradient(0, 0, 0, 400);
+
+        cpuGradient.addColorStop(0, 'rgba(52,152,219,0.5)');
+        cpuGradient.addColorStop(1, 'rgba(52,152,219,0.05)');
+
+        // Memory gradient
+        const memGradient = ctx.createLinearGradient(0, 0, 0, 400);
+
+        memGradient.addColorStop(0, 'rgba(155,89,182,0.5)');
+        memGradient.addColorStop(1, 'rgba(155,89,182,0.05)');
+
+        // CHART
+        const chart = new Chart(ctx, {
+
+            type: 'line',
+
+            data: {
+
+                labels: [],
+
+                datasets: [
+
+                    {
+                        label: 'CPU Usage (%)',
+
+                        data: [],
+
+                        borderColor: '#3498db',
+
+                        backgroundColor: cpuGradient,
+
+                        fill: true,
+
+                        tension: 0.4
+                    },
+
+                    {
+                        label: 'Memory Usage (%)',
+
+                        data: [],
+
+                        borderColor: '#9b59b6',
+
+                        backgroundColor: memGradient,
+
+                        fill: true,
+
+                        tension: 0.4
+                    }
+                ]
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+
+                scales: {
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        max: 100,
+
+                        ticks: {
+                            callback: value => value + '%'
+                        }
+                    }
+                }
+            }
+        });
+
+        // LOAD DATA
+        function loadHistoryData() {
+
+            fetch('/history')
+
+            .then(response => response.json())
+
+            .then(data => {
+
+                const last30 = data.slice(-30);
+
+                const labels = last30.map(item => item.time);
+
+                const cpuData = last30.map(item => item.cpu);
+
+                const memoryData = last30.map(item => item.memory);
+
+                chart.data.labels = labels;
+
+                chart.data.datasets[0].data = cpuData;
+
+                chart.data.datasets[1].data = memoryData;
+
+                chart.update();
+
+            });
+
+        }
+
+        // INITIAL LOAD
+        loadHistoryData();
+
+        // AUTO REFRESH
+        setInterval(loadHistoryData, 5000);
+    </script>
+    <script>
+        function toggleLogs() {
+
+            const logs = document.getElementById("logsSection");
+
+            if (logs.style.display === "none") {
+                logs.style.display = "block";
+            } else {
+                logs.style.display = "none";
+            }
+        }
+    </script>
+</body>
+
+</html>

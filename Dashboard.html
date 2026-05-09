@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel Net Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom, #eef2f7, #dfe6f0);
+        }
+        /* HEADER */
+        
+        .header {
+            background: #2f4b7c;
+            color: white;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h2 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: 500;
+        }
+        
+        .nav a:hover {
+            opacity: 0.8;
+        }
+        /* MAIN WRAPPER */
+        
+        .wrapper {
+            width: 90%;
+            margin: 30px auto;
+            background: #f5f7fb;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        /* STATUS */
+        
+        .status {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .status small {
+            color: gray;
+            letter-spacing: 2px;
+        }
+        
+        .status h2 {
+            font-size: 30px;
+            margin-top: 10px;
+        }
+        
+        .normal {
+            color: green;
+        }
+        
+        .alert {
+            color: red;
+        }
+        /* CARDS */
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .card h4 {
+            margin: 0;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #222;
+        }
+        /* GRAPH */
+        
+        .graph-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .graph-box h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        canvas {
+            max-height: 400px;
+        }
+        /* MOBILE RESPONSIVE */
+        
+        @media(max-width: 900px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+
+        <div style="
+        display:flex;
+        align-items:center;
+        gap:15px;
+    ">
+
+            <img src="{{ url_for('static', filename='logo.jpg') }}" alt="logo" style="
+                width:55px;
+                height:55px;
+                border-radius:10px;
+                object-fit:cover;
+             ">
+
+            <h2>Sentinel Net</h2>
+
+        </div>
+
+        <div class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/history-page">History</a>
+        </div>
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="wrapper">
+
+        <!-- STATUS -->
+        <div class="status">
+            <small>SYSTEM STATUS</small>
+
+            <h2 class="{{ status_class }}">
+                {{ status }}
+            </h2>
+        </div>
+
+        <!-- CARDS -->
+        <div class="cards">
+
+            <!-- CPU -->
+            <div class="card">
+                <h4>CPU Usage</h4>
+                <div class="value">
+                    {{ cpu }}%
+                </div>
+            </div>
+
+            <!-- MEMORY -->
+            <div class="card">
+                <h4>Memory Usage</h4>
+                <div class="value">
+                    {{ memory }}%
+                </div>
+            </div>
+
+            <!-- LAST ALERT -->
+            <div class="card">
+                <h4>Last Alert</h4>
+
+                <div class="value">
+                    {{ last_alert }}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- GRAPH -->
+        <div class="graph-box">
+            <h3>CPU Usage and Memory Usage Trend</h3>
+
+            <canvas id="chart"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const times = JSON.parse('{{ times | tojson | safe }}');
+        const cpuData = JSON.parse('{{ cpu_values | tojson | safe }}');
+        const memoryData = JSON.parse('{{ memory_values | tojson | safe }}');
+
+        const ctx = document.getElementById('chart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+
+            data: {
+                labels: times,
+
+                datasets: [
+
+                    {
+                        label: 'CPU Usage (%)',
+                        data: cpuData,
+
+                        borderColor: '#2b6cb0',
+                        backgroundColor: 'rgba(43,108,176,0.2)',
+
+                        tension: 0.4,
+                        fill: true
+                    },
+
+                    {
+                        label: 'Memory Usage (%)',
+                        data: memoryData,
+
+                        borderColor: '#e53e3e',
+                        backgroundColor: 'rgba(229,62,62,0.2)',
+
+                        tension: 0.4,
+                        fill: true
+                    }
+
+                ]
+            },
+
+            options: {
+                responsive: true,
+
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
